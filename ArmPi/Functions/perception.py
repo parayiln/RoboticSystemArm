@@ -92,11 +92,6 @@ class Perception(object):
         my_camera = Camera.Camera()
         my_camera.camera_open()
 
-    def __init__(self):
-        Board.setBusServoPulse(1, servo1 - 50, 300)
-        Board.setBusServoPulse(2, 500, 500)
-        AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
-
 
     def init_val(self):
         Board.setBusServoPulse(1, servo1 - 50, 300)
@@ -273,29 +268,25 @@ class Perception(object):
 
 # running self.thread
 
-    def run(img):
-
-
+    def process(self,img):
         img_copy = img.copy()
         img_h, img_w = img.shape[:2]
         cv2.line(img, (0, int(img_h / 2)), (img_w, int(img_h / 2)), (0, 0, 200), 1)
         cv2.line(img, (int(img_w / 2), 0), (int(img_w / 2), img_h), (0, 0, 200), 1)
-
         if not __isRunning:
             return img
-
-        frame_resize = cv2.resize(img_copy, size, interpolation=cv2.INTER_NEAREST)
+        frame_resize = cv2.resize(img_copy, self.size, interpolation=cv2.INTER_NEAREST)
         frame_gb = cv2.GaussianBlur(frame_resize, (11, 11), 11)
         # If it is detected wiself.th a aera recognized object, self.the area will be detected ubtil self.there is no object
-        if get_roi and start_pick_up:
+        if get_roi and self.start_pick_up:
             get_roi = False
-            frame_gb = getMaskROI(frame_gb, roi, size)
+            frame_gb = getMaskROI(frame_gb, self.roi, self.size)
 
         frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB)  # convert self.the image to LAB space
 
         area_max = 0
         areaMaxContour = 0
-        if not start_pick_up:
+        if not self.start_pick_up:
             for i in color_range:
                 if i in __target_color:
                     detect_color = i
@@ -356,6 +347,7 @@ if __name__ == '__main__':
         img = my_camera.frame
         if img is not None:
             frame = img.copy()
+            frame = percep.process()
             Frame = run(frame)
             cv2.imshow('Frame', Frame)
             key = cv2.waitKey(1)
