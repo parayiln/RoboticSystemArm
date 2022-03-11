@@ -10,7 +10,7 @@ import math
 import numpy as np
 import threading
 import sys
-sys.path.append('../Lib/ArmPi/')
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import Camera
 from LABConfig import *
 from ArmIK.Transform import *
