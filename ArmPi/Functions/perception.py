@@ -1,7 +1,7 @@
 #!/usr/bin/pyself.thon3
 # coding=utf8
 import atexit
-from logdecorator import log_on_start, log_on_end, log_on_error
+# from logdecorator import log_on_start, log_on_end, log_on_error
 import sys
 sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 
@@ -19,9 +19,9 @@ if sys.version_info.major == 2:
     sys.exit(0)
 
 class Perception(object):
-    @log_on_start(logging.DEBUG, "Perception starting ")
-    @log_on_error(logging.DEBUG, "Error in Perception")
-    @log_on_end(logging.DEBUG, "Perception done")
+    # @log_on_start(logging.DEBUG, "Perception starting ")
+    # @log_on_error(logging.DEBUG, "Error in Perception")
+    # @log_on_end(logging.DEBUG, "Perception done")
 
     def __init__(self):
 
