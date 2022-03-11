@@ -3,7 +3,7 @@
 import logging
 logging_format = "%(asctime)s: %(message)s"
 import atexit
-from logdecorator import log_on_start, log_on_end, log_on_error
+# from logdecorator import log_on_start, log_on_end, log_on_error
 import cv2
 import time
 import math
@@ -21,9 +21,9 @@ from CameraCalibration.CalibrationConfig import *
 
 class Perception(object):
 
-    @log_on_start(logging.DEBUG, "Constructor called ")
-    @log_on_error(logging.DEBUG, "Error in constructor call")
-    @log_on_end(logging.DEBUG, "Constructor finished")
+    # @log_on_start(logging.DEBUG, "Constructor called ")
+    # @log_on_error(logging.DEBUG, "Error in constructor call")
+    # @log_on_end(logging.DEBUG, "Constructor finished")
     def __init__(self, logging_level='INFO'):
         print("Perception starting")
         if logging_level == 'INFO':
@@ -63,7 +63,7 @@ class Perception(object):
         self.th_p = threading.Thread(target=self.run_perception, args=(), daemon=True)
         self.th_p.start()
 
-    @log_on_error(logging.DEBUG, "Can't save, Image empty")
+    # @log_on_error(logging.DEBUG, "Can't save, Image empty")
     def sense(self):
         img = self.camera.frame
         if img is not None:
@@ -79,7 +79,7 @@ class Perception(object):
         self.camera.camera_close()
         cv2.destroyAllWindows()
 
-    @log_on_error(logging.DEBUG, "Can't show, Image empty")
+    # @log_on_error(logging.DEBUG, "Can't show, Image empty")
     def show(self, name='frame', frame=None):
         if frame is not None:
             cv2.imshow(name, frame)
