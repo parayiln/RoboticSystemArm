@@ -3,33 +3,32 @@
 import logging
 logging_format = "%(asctime)s: %(message)s"
 import atexit
-from logdecorator import log_on_start, log_on_end, log_on_error
+# from logdecorator import log_on_start, log_on_end, log_on_error
 import cv2
 import time
 import math
 import numpy as np
 import threading
 import sys
-sys.paself.th.append('/home/pi/ArmPi/')
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import Camera
 from LABConfig import *
 from ArmIK.Transform import *
 from ArmIK.ArmMoveIK import *
 import HiwonderSDK.Board as Board
 from CameraCalibration.CalibrationConfig import *
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/Function')
 from perception import Perception
 
-class Move(Perception):
-
-        @log_on_start(logging.DEBUG, "moving  ")
-        @log_on_error(logging.DEBUG, "Error in move")
-        @log_on_end(logging.DEBUG, "move done")
-
-        
+class Motion(Perception):
     def __init__(self, servo1=500, task='sorting', logging_level='INFO'):
         super().__init__()
         self.setTargetColor(['red', 'blue', 'green'])
         print("Motion starting")
+        if logging_level == 'INFO':
+            logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
+        elif logging_level == 'DEBUG':
+            logging.basicConfig(format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
         self.AK = ArmIK()
         self.servo1 = servo1 # angle it which the gripper closes
         self.task = task #sorting or stacking
@@ -49,6 +48,7 @@ class Move(Perception):
         Board.setBusServoPulse(2, 500, 500)
         self.AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
 
+    @staticmethod
     def setBuzzer(timer):
         Board.setBuzzer(0)
         Board.setBuzzer(1)
@@ -56,6 +56,7 @@ class Move(Perception):
         Board.setBuzzer(0)
 
     # Set the color of the RGB lights of the expansion board to match the color to be tracked
+    @staticmethod
     def set_rgb(color):
         if color == "red":
             Board.RGB.setPixelColor(0, Board.PixelColor(255, 0, 0))
@@ -84,124 +85,133 @@ class Move(Perception):
         print("Stopping motion")
         sys.exit()
 
-    # ArmPi move self.thread
-    def move(self):
 
-        # different colors blocks place coordinates(x, y, z)
-        coordinate = {
-            'red':   (-15 + 0.5, 12 - 0.5, 1.5),
-            'green': (-15 + 0.5, 6 - 0.5,  1.5),
-            'blue':  (-15 + 0.5, 0 - 0.5,  1.5),
-        }
+    @log_on_error(logging.DEBUG, "Select either sorting or stacking")
+    def set_task_parameters(self):
+        if self.task == 'sorting':
+            self.coordinate = {
+                'red': (-15 + 0.5, 12 - 0.5, 1.5),
+                'green': (-15 + 0.5, 6 - 0.5, 1.5),
+                'blue': (-15 + 0.5, 0 - 0.5, 1.5),
+            }
+        elif self.task == 'stacking':
+            self.coordinate = {
+                'red': (-15 + 1, -7 - 0.5, 1.5),
+                'green': (-15 + 1, -7 - 0.5, 1.5),
+                'blue': (-15 + 1, -7 - 0.5, 1.5),
+            }
+            self.z_r = self.coordinate['red'][2]
+            self.z_g = self.coordinate['green'][2]
+            self.z_b = self.coordinate['blue'][2]
+            self.z = self.z_r
+            self.dz = 2.5
+        else:
+            raise IOError("Task not supported")
+
+
+    def move(self):
         while True:
-            if self.__isRunning:
-                if self.first_move and self.start_pick_up: # when an object be detected for self.the first time
-                    self.action_finish = False
+            if self.isRunning and not self.stop:
+                if self.detect_color != 'None' and self.start_pick_up:
                     self.set_rgb(self.detect_color)
                     self.setBuzzer(0.1)
-                    result = AK.setPitchRangeMoving((self.world_X, self.world_Y - 2, 5), -90, -90, 0) # do not fill running time parameters,self-adaptive running time
-                    if self.result == False:
+                    if self.task == 'stacking':
+                        self.z = self.z_r
+                        self.z_r += self.dz
+                        if self.z == 2 * self.dz + self.coordinate['red'][2]:
+                            self.z_r = self.coordinate['red'][2]
+                        if self.z == self.coordinate['red'][2]:
+                            self.move_square = True
+                            time.sleep(3)
+                            self.move_square = False
+                    result = self.AK.setPitchRangeMoving((self.world_X, self.world_Y, 7), -90, -90, 0)
+                    if result == False:
                         self.unreachable = True
+
                     else:
                         self.unreachable = False
-                    time.sleep(result[2]/1000) # self.the self.thrid item of return parameter is time
-                    self.start_pick_up = False
-                    self.first_move = False
-                    self.action_finish = True
-                elif not self.first_move and not self.unreachable: # not self.the first time to detected object
-                    self.set_rgb(self.detect_color)
-                    if self.track: # if it is following state
-                        if not self.__isRunning: # stop and exit flag detection
-                            continue
-                        AK.setPitchRangeMoving((self.world_x, self.world_y - 2, 5), -90, -90, 0, 20)
-                        time.sleep(0.02)
-                        self.track = False
-                    if self.start_pick_up: # if it is detected self.that self.the block has not removed for a period of time, start to pick up
-                        self.action_finish = False
-                        if not self.__isRunning: # stop and exit flag detection
-                            continue
-                        Board.setBusServoPulse(1, servo1 - 280, 500)  # claw open
-                        # calculate angle at self.that self.the clamper gripper needs to rotate
-                        self.servo2_angle = getAngle(self.world_X, self.world_Y, self.rotation_angle)
-                        Board.setBusServoPulse(2, self.servo2_angle, 500)
-                        time.sleep(0.8)
+                        time.sleep(result[2] / 1000)  # If the specified location can be reached, get the running time
 
-                        if not self.__isRunning:
+                        if not self.isRunning:
                             continue
-                        AK.setPitchRangeMoving((self.world_X, self.world_Y, 2), -90, -90, 0, 1000)  # reduce height
-                        time.sleep(2)
-
-                        if not self.__isRunning:
-                            continue
-                        Board.setBusServoPulse(1, servo1, 500)  # claw colsed
-                        time.sleep(1)
-
-                        if not self.__isRunning:
-                            continue
-                        Board.setBusServoPulse(2, 500, 500)
-                        AK.setPitchRangeMoving((world_X, world_Y, 12), -90, -90, 0, 1000)  # Armpi robot arm up
-                        time.sleep(1)
-
-                        if not __isRunning:
-                            continue
-                        # Sort and place different colored blocks
-                        result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)
-                        time.sleep(result[2]/1000)
-
-                        if not __isRunning:
-                            continue
-                        self.servo2_angle = getAngle(coordinate[detect_color][0], coordinate[detect_color][1], -90)
+                        servo2_angle = getAngle(self.world_X, self.world_Y, self.rotation_angle)  # Calculate the angle by which the gripper needs to be rotated
+                        Board.setBusServoPulse(1, self.servo1 - 280, 500)
                         Board.setBusServoPulse(2, servo2_angle, 500)
                         time.sleep(0.5)
 
-                        if not __isRunning:
+                        if not self.isRunning:
                             continue
-                        AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], coordinate[detect_color][2] + 3), -90, -90, 0, 500)
+                        self.AK.setPitchRangeMoving((self.world_X, self.world_Y, 1.5), -90, -90, 0, 1000)
+                        time.sleep(1.5)
+
+                        if not self.isRunning:
+                            continue
+                        Board.setBusServoPulse(1, self.servo1, 500)  # Gripper closed
+                        time.sleep(0.8)
+
+                        if not self.isRunning:
+                            continue
+                        Board.setBusServoPulse(2, 500, 500)
+                        self.AK.setPitchRangeMoving((self.world_X, self.world_Y, 12), -90, -90, 0, 1000)  # The robotic arm is raised
+                        time.sleep(1)
+
+                        if not self.isRunning:
+                            continue
+                        result = self.AK.setPitchRangeMoving((self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], 12), -90, -90, 0)
+                        time.sleep(result[2] / 1000)
+
+                        if not self.isRunning:
+                            continue
+                        servo2_angle = getAngle(self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], -90)
+                        Board.setBusServoPulse(2, servo2_angle, 500)
                         time.sleep(0.5)
 
-                        if not __isRunning:
+                        if self.task == 'sorting':
+                            if not self.isRunning:
+                                continue
+                            self.AK.setPitchRangeMoving((self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], self.coordinate[self.detect_color][2] + 3), -90, -90, 0, 500)
+                        elif self.task == 'stacking':
+                            if not self.isRunning:
+                                continue
+                            self.AK.setPitchRangeMoving((self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], self.z + 3), -90, -90, 0, 500)
+                        time.sleep(0.5)
+
+                        if self.task == 'sorting':
+                            if not self.isRunning:
+                                continue
+                            self.AK.setPitchRangeMoving((self.coordinate[self.detect_color]), -90, -90, 0, 1000)
+                        elif self.task == 'stacking':
+                            if not self.isRunning:
+                                continue
+                            self.AK.setPitchRangeMoving((self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], self.z), -90, -90, 0, 500)
+                        time.sleep(0.5)
+
+                        if not self.isRunning:
                             continue
-                        AK.setPitchRangeMoving((coordinate[detect_color]), -90, -90, 0, 1000)
+                        Board.setBusServoPulse(1, self.servo1 - 200, 500)  # Claws open to drop objects
                         time.sleep(0.8)
 
-                        if not __isRunning:
+                        if not self.isRunning:
                             continue
-                        Board.setBusServoPulse(1, servo1 - 200, 500)  # gripper open，put down object
+                        self.AK.setPitchRangeMoving((self.coordinate[self.detect_color][0], self.coordinate[self.detect_color][1], 12), -90, -90, 0, 800)
                         time.sleep(0.8)
 
-                        if not __isRunning:
-                            continue
-                        AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0, 800)
-                        time.sleep(0.8)
-
-                        initMove()  # back to initial position
+                        self.initMove()  # return to original position
                         time.sleep(1.5)
 
                         self.detect_color = 'None'
-                        self.first_move = True
                         self.get_roi = False
-                        self.action_finish = True
                         self.start_pick_up = False
-                        self.set_rgb(detect_color)
-                    else:
-                        time.sleep(0.01)
+                        self.set_rgb(self.detect_color)
             else:
-                if self._stop:
-                    self._stop = False
-                    Board.setBusServoPulse(1, servo1 - 70, 300)
-                    time.sleep(0.5)
-                    Board.setBusServoPulse(2, 500, 500)
-                    AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
-                    time.sleep(1.5)
                 time.sleep(0.01)
-
 
 if __name__ == '__main__':
 
-    move = Move()
+    motion = Motion()
 
     while True:
         key = cv2.waitKey(1)
         if key == 27:
-            move.stop_motion()
+            motion.stop_motion()
             break
