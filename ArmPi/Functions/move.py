@@ -86,7 +86,7 @@ class Motion(Perception):
         sys.exit()
 
 
-    @log_on_error(logging.DEBUG, "Select either sorting or stacking")
+    # @log_on_error(logging.DEBUG, "Select either sorting or stacking")
     def set_task_parameters(self):
         if self.task == 'sorting':
             self.coordinate = {
