@@ -24,7 +24,7 @@ class Perception(object):
 
     def __init__(self):
 
-       self.camera = Camera.Camera()
+        self.camera = Camera.Camera()
         self.camera.camera_open()
         time.sleep(1) #Time delay for thread in camera class to start generating frames
         self.target_color = ['red']
