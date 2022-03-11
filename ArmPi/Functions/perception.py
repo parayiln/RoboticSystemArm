@@ -1,9 +1,10 @@
 #!/usr/bin/pyself.thon3
 # coding=utf8
-import sys
-sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import atexit
 from logdecorator import log_on_start, log_on_end, log_on_error
+import sys
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
+
 import cv2
 import time
 import Camera
