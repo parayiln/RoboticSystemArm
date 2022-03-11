@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # coding=utf8
 import sys
-sys.path.append('/home/pi/ArmPi/')
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import cv2
 import time
 import Camera
@@ -27,7 +27,7 @@ range_rgb = {
 }
 
 __target_color = ('red')
-# set be detected color 
+# set be detected color
 def setTargetColor(target_color):
     global __target_color
 
@@ -139,7 +139,7 @@ def exit():
 rect = None
 size = (640, 480)
 rotation_angle = 0
-unreachable = False 
+unreachable = False
 world_X, world_Y = 0, 0
 def move():
     global rect
@@ -151,7 +151,7 @@ def move():
     global start_pick_up
     global rotation_angle
     global world_X, world_Y
-    
+
     #放置坐标 placement coordinates
     coordinate = {
         'red':   (-15 + 0.5, 12 - 0.5, 1.5),
@@ -159,18 +159,18 @@ def move():
         'blue':  (-15 + 0.5, 0 - 0.5,  1.5),
     }
     while True:
-        if __isRunning:        
+        if __isRunning:
             if detect_color != 'None' and start_pick_up:  # if it is detected that the block has not removed for a period of time, start to pick up
-                # Remove to target postion, high is 6 cm, through return result to judge whether it can reach the specified location 
+                # Remove to target postion, high is 6 cm, through return result to judge whether it can reach the specified location
                 # if the running time is not given，it is automatically calculated and returned by the result
                 set_rgb(detect_color)
                 setBuzzer(0.1)
-                result = AK.setPitchRangeMoving((world_X, world_Y, 7), -90, -90, 0)  
+                result = AK.setPitchRangeMoving((world_X, world_Y, 7), -90, -90, 0)
                 if result == False:
                     unreachable = True
                 else:
                     unreachable = False
-                    time.sleep(result[2]/1000) # if it can reach to specified location, then get running time 
+                    time.sleep(result[2]/1000) # if it can reach to specified location, then get running time
 
                     if not __isRunning:
                         continue
@@ -178,7 +178,7 @@ def move():
                     Board.setBusServoPulse(1, servo1 - 280, 500)  # claw open
                     Board.setBusServoPulse(2, servo2_angle, 500)
                     time.sleep(0.5)
-                    
+
                     if not __isRunning:
                         continue
                     AK.setPitchRangeMoving((world_X, world_Y, 1.5), -90, -90, 0, 1000)
@@ -197,11 +197,11 @@ def move():
 
                     if not __isRunning:
                         continue
-                    result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)   
+                    result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)
                     time.sleep(result[2]/1000)
-                    
+
                     if not __isRunning:
-                        continue                   
+                        continue
                     servo2_angle = getAngle(coordinate[detect_color][0], coordinate[detect_color][1], -90)
                     Board.setBusServoPulse(2, servo2_angle, 500)
                     time.sleep(0.5)
@@ -210,15 +210,15 @@ def move():
                         continue
                     AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], coordinate[detect_color][2] + 3), -90, -90, 0, 500)
                     time.sleep(0.5)
-                    
+
                     if not __isRunning:
-                        continue                    
+                        continue
                     AK.setPitchRangeMoving((coordinate[detect_color]), -90, -90, 0, 1000)
                     time.sleep(0.8)
 
                     if not __isRunning:
                         continue
-                    Board.setBusServoPulse(1, servo1 - 200, 500)  # gripper open，put down object 
+                    Board.setBusServoPulse(1, servo1 - 200, 500)  # gripper open，put down object
                     time.sleep(0.8)
 
                     if not __isRunning:
@@ -242,11 +242,11 @@ def move():
                 AK.setPitchRangeMoving((0, 10, 10), -30, -30, -90, 1500)
                 time.sleep(1.5)
             time.sleep(0.01)
-          
-# running Thread 
+
+# running Thread
 th = threading.Thread(target=move)
 th.setDaemon(True)
-th.start()    
+th.start()
 
 t1 = 0
 roi = ()
@@ -267,7 +267,7 @@ def run(img):
     global world_X, world_Y
     global start_count_t1, t1
     global detect_color, draw_color, color_list
-    
+
     img_copy = img.copy()
     img_h, img_w = img.shape[:2]
     cv2.line(img, (0, int(img_h / 2)), (img_w, int(img_h / 2)), (0, 0, 200), 1)
@@ -281,13 +281,13 @@ def run(img):
     # If it is detected with a aera recognized object, the area will be detected ubtil there is no object
     if get_roi and not start_pick_up:
         get_roi = False
-        frame_gb = getMaskROI(frame_gb, roi, size)      
+        frame_gb = getMaskROI(frame_gb, roi, size)
     frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB)  # convert the image to LAB space
 
     color_area_max = None
     max_area = 0
     areaMaxContour_max = 0
-    
+
     if not start_pick_up:
         for i in color_range:
             if i in __target_color:
@@ -304,17 +304,17 @@ def run(img):
         if max_area > 2500:  # have found the maximum area
             rect = cv2.minAreaRect(areaMaxContour_max)
             box = np.int0(cv2.boxPoints(rect))
-            
+
             roi = getROI(box) # get roi zone
             get_roi = True
             img_centerx, img_centery = getCenter(rect, roi, size, square_length)  # get the center coordinates of block
-             
+
             world_x, world_y = convertCoordinate(img_centerx, img_centery, size) # convert to world coordinates
-            
+
             cv2.drawContours(img, [box], -1, range_rgb[color_area_max], 2)
             cv2.putText(img, '(' + str(world_x) + ',' + str(world_y) + ')', (min(box[0, 0], box[2, 0]), box[2, 1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, range_rgb[color_area_max], 1) # draw center position
-            
+
             distance = math.sqrt(pow(world_x - last_x, 2) + pow(world_y - last_y, 2)) # compare the last coordinate to determine whether to move
             last_x, last_y = world_x, world_y
             if not start_pick_up:
@@ -335,7 +335,7 @@ def run(img):
                         start_count_t1 = False
                         t1 = time.time()
                     if time.time() - t1 > 1:
-                        rotation_angle = rect[2] 
+                        rotation_angle = rect[2]
                         start_count_t1 = True
                         world_X, world_Y = np.mean(np.array(center_list).reshape(count, 2), axis=0)
                         center_list = []
@@ -381,7 +381,7 @@ if __name__ == '__main__':
         img = my_camera.frame
         if img is not None:
             frame = img.copy()
-            Frame = run(frame)           
+            Frame = run(frame)
             cv2.imshow('Frame', Frame)
             key = cv2.waitKey(1)
             if key == 27:

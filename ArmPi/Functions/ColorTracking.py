@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # coding=utf8
 import sys
-sys.path.append('/home/pi/ArmPi/')
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import cv2
 import time
 import Camera
@@ -42,7 +42,7 @@ def getAreaMaxContour(contours):
     contour_area_max = 0
     area_max_contour = None
 
-    for c in contours:  # traversal all the contours 
+    for c in contours:  # traversal all the contours
         contour_area_temp = math.fabs(cv2.contourArea(c))  # calculate the countour area
         if contour_area_temp > contour_area_max:
             contour_area_max = contour_area_temp
@@ -110,7 +110,7 @@ def reset():
     global start_pick_up
     global __target_color
     global start_count_t1
-    
+
     count = 0
     _stop = False
     track = False
@@ -135,9 +135,9 @@ def start():
     __isRunning = True
     print("ColorTracking Start")
 
-# app stop games 
+# app stop games
 def stop():
-    global _stop 
+    global _stop
     global __isRunning
     _stop = True
     __isRunning = False
@@ -157,7 +157,7 @@ rotation_angle = 0
 unreachable = False
 world_X, world_Y = 0, 0
 world_x, world_y = 0, 0
-# ArmPi move thread 
+# ArmPi move thread
 def move():
     global rect
     global track
@@ -181,16 +181,16 @@ def move():
     }
     while True:
         if __isRunning:
-            if first_move and start_pick_up: # when an object be detected for the first time                
+            if first_move and start_pick_up: # when an object be detected for the first time
                 action_finish = False
                 set_rgb(detect_color)
-                setBuzzer(0.1)               
+                setBuzzer(0.1)
                 result = AK.setPitchRangeMoving((world_X, world_Y - 2, 5), -90, -90, 0) # do not fill running time parameters,self-adaptive running time
                 if result == False:
                     unreachable = True
                 else:
                     unreachable = False
-                time.sleep(result[2]/1000) # the thrid item of return parameter is time 
+                time.sleep(result[2]/1000) # the thrid item of return parameter is time
                 start_pick_up = False
                 first_move = False
                 action_finish = True
@@ -200,7 +200,7 @@ def move():
                     if not __isRunning: # stop and exit flag detection
                         continue
                     AK.setPitchRangeMoving((world_x, world_y - 2, 5), -90, -90, 0, 20)
-                    time.sleep(0.02)                    
+                    time.sleep(0.02)
                     track = False
                 if start_pick_up: # if it is detected that the block has not removed for a period of time, start to pick up
                     action_finish = False
@@ -211,29 +211,29 @@ def move():
                     servo2_angle = getAngle(world_X, world_Y, rotation_angle)
                     Board.setBusServoPulse(2, servo2_angle, 500)
                     time.sleep(0.8)
-                    
+
                     if not __isRunning:
                         continue
                     AK.setPitchRangeMoving((world_X, world_Y, 2), -90, -90, 0, 1000)  # reduce height
                     time.sleep(2)
-                    
+
                     if not __isRunning:
                         continue
                     Board.setBusServoPulse(1, servo1, 500)  # claw colsed
                     time.sleep(1)
-                    
+
                     if not __isRunning:
                         continue
                     Board.setBusServoPulse(2, 500, 500)
                     AK.setPitchRangeMoving((world_X, world_Y, 12), -90, -90, 0, 1000)  # Armpi robot arm up
                     time.sleep(1)
-                    
+
                     if not __isRunning:
                         continue
-                    # Sort and place different colored blocks 
-                    result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)   
+                    # Sort and place different colored blocks
+                    result = AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0)
                     time.sleep(result[2]/1000)
-                    
+
                     if not __isRunning:
                         continue
                     servo2_angle = getAngle(coordinate[detect_color][0], coordinate[detect_color][1], -90)
@@ -244,23 +244,23 @@ def move():
                         continue
                     AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], coordinate[detect_color][2] + 3), -90, -90, 0, 500)
                     time.sleep(0.5)
-                    
+
                     if not __isRunning:
                         continue
                     AK.setPitchRangeMoving((coordinate[detect_color]), -90, -90, 0, 1000)
                     time.sleep(0.8)
-                    
+
                     if not __isRunning:
                         continue
                     Board.setBusServoPulse(1, servo1 - 200, 500)  # gripper open，put down object
                     time.sleep(0.8)
-                    
+
                     if not __isRunning:
-                        continue                    
+                        continue
                     AK.setPitchRangeMoving((coordinate[detect_color][0], coordinate[detect_color][1], 12), -90, -90, 0, 800)
                     time.sleep(0.8)
 
-                    initMove()  # back to initial position 
+                    initMove()  # back to initial position
                     time.sleep(1.5)
 
                     detect_color = 'None'
@@ -306,24 +306,24 @@ def run(img):
     global world_x, world_y
     global start_count_t1, t1
     global start_pick_up, first_move
-    
+
     img_copy = img.copy()
     img_h, img_w = img.shape[:2]
     cv2.line(img, (0, int(img_h / 2)), (img_w, int(img_h / 2)), (0, 0, 200), 1)
     cv2.line(img, (int(img_w / 2), 0), (int(img_w / 2), img_h), (0, 0, 200), 1)
-    
+
     if not __isRunning:
         return img
-     
+
     frame_resize = cv2.resize(img_copy, size, interpolation=cv2.INTER_NEAREST)
     frame_gb = cv2.GaussianBlur(frame_resize, (11, 11), 11)
     # If it is detected with a aera recognized object, the area will be detected ubtil there is no object
     if get_roi and start_pick_up:
         get_roi = False
-        frame_gb = getMaskROI(frame_gb, roi, size)    
-    
+        frame_gb = getMaskROI(frame_gb, roi, size)
+
     frame_lab = cv2.cvtColor(frame_gb, cv2.COLOR_BGR2LAB)  # convert the image to LAB space
-    
+
     area_max = 0
     areaMaxContour = 0
     if not start_pick_up:
@@ -344,8 +344,8 @@ def run(img):
 
             img_centerx, img_centery = getCenter(rect, roi, size, square_length)  # get the center coordinates of block
             world_x, world_y = convertCoordinate(img_centerx, img_centery, size) # convert to world coordinates
-            
-            
+
+
             cv2.drawContours(img, [box], -1, range_rgb[detect_color], 2)
             cv2.putText(img, '(' + str(world_x) + ',' + str(world_y) + ')', (min(box[0, 0], box[2, 0]), box[2, 1] - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, range_rgb[detect_color], 1) # draw center position
@@ -385,7 +385,7 @@ if __name__ == '__main__':
         img = my_camera.frame
         if img is not None:
             frame = img.copy()
-            Frame = run(frame)           
+            Frame = run(frame)
             cv2.imshow('Frame', Frame)
             key = cv2.waitKey(1)
             if key == 27:

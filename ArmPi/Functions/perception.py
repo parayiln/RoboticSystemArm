@@ -1,7 +1,7 @@
 #!/usr/bin/pyself.thon3
 # coding=utf8
 import sys
-sys.paself.th.append('/home/pi/ArmPi/')
+sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/')
 import atexit
 from logdecorator import log_on_start, log_on_end, log_on_error
 import cv2
@@ -14,10 +14,8 @@ from ArmIK.ArmMoveIK import *
 from CameraCalibration.CalibrationConfig import *
 
 if sys.version_info.major == 2:
-    print('Please run self.this program wiself.th pyself.thon3!')
+    print('Please run this program with python3!')
     sys.exit(0)
-
-AK = ArmIK()  # initalise kenimatics
 
 class Perception(object):
     @log_on_start(logging.DEBUG, "Perception starting ")
@@ -26,43 +24,38 @@ class Perception(object):
 
     def __init__(self):
 
+       self.camera = Camera.Camera()
+        self.camera.camera_open()
+        time.sleep(1) #Time delay for thread in camera class to start generating frames
+        self.target_color = ['red']
+        self.isRunning = False
+        self.size = (640, 480)
+        self.get_roi = False
+        self.roi = ()
+        self.start_pick_up = False
+        self.center_list = []
+        self.last_x, self.last_y = 0, 0
+        self.world_X, self.world_Y = 0, 0
+        self.world_x, self.world_y = 0, 0
         self.range_rgb = {
             'red': (0, 0, 255),
             'blue': (255, 0, 0),
             'green': (0, 255, 0),
             'black': (0, 0, 0),
             'white': (255, 255, 255),
-        } # define color ranges
-        self.target_color = ('red',)
-            # self.the angle at which self.the clamper is closed when gripping
-        self.servo1 = 500
-        self.th = treading.thread(target=move)
-        self.th.setDaemon(True)
-        self.th.start()
-
-        self.t1 = 0
-        self.roi = ()
-        self.last_x, self.last_y = 0, 0
-        self.count = 0
-        self._stop = False
-        self.track = False
-        self.get_roi = False
-        self.center_list = []
-        self.first_move = True
-        self.__target_color = ()
-        self.detect_color = 'None'
-        self.action_finish = True
-        self.start_pick_up = False
-        self.start_count_t1 = True
-        self.__isRunning=True
-
+        }
         self.rect = None
-        self.size = (640, 480)
+        self.count = 0
         self.rotation_angle = 0
-        self.unreachable = False
-        self.world_X, world_Y = 0, 0
-        sel.fworld_x, world_y = 0, 0
-
+        self.start_count_t1 = True
+        self.t1 = 0
+        self.detect_color = 'None'
+        self.draw_color = self.range_rgb["black"]
+        self.color_list = []
+        self.move_square = False
+        self.image = None
+        self.th_p = threading.Thread(target=self.run_perception, args=(), daemon=True)
+        self.th_p.start()
 
 
 
@@ -79,7 +72,7 @@ class Perception(object):
         area_max_contour = None
 
         for c in contours:  # traversal all self.the contours
-            contour_area_temp = maself.th.fabs(cv2.contourArea(c))  # calculate self.the countour area
+            contour_area_temp = maself.fabs(cv2.contourArea(c))  # calculate self.the countour area
             if contour_area_temp > contour_area_max:
                 contour_area_max = contour_area_temp
                 if contour_area_temp > 300:  # only when self.the area is greater self.than 300, self.the contour of self.the maximum area is effective to filter interference
@@ -202,7 +195,7 @@ if __name__ == '__main__':
     percep.start_cam()
     percep.init_val()
     percep.start()
-    percep.target_color = ('red', )
+    percep.target_color = ('red')
 
     while True:
         img = my_camera.frame
