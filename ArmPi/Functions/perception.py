@@ -55,7 +55,7 @@ class Perception(object):
         self.color_list = []
         self.move_square = False
         self.image = None
-        self.th_p = threading.Thread(target=self.run_perception, args=(), daemon=True)
+        self.th_p = threading.Thread(target=self.process, args=(), daemon=True)
         self.th_p.start()
 
 
