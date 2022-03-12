@@ -1,4 +1,3 @@
-
 #!/usr/bin/python3
 # coding=utf8
 import logging
@@ -20,27 +19,19 @@ import HiwonderSDK.Board as Board
 from CameraCalibration.CalibrationConfig import *
 
 
-class Perception(object):
 
-    # @log_on_start(logging.DEBUG, "Constructor called ")
-    # @log_on_error(logging.DEBUG, "Error in constructor call")
-    # @log_on_end(logging.DEBUG, "Constructor finished")
-    def __init__(self, logging_level='INFO'):
+class Sensing(object):
+
+        def __init__(self):
         print("Perception starting")
-        if logging_level == 'INFO':
-            logging.basicConfig(format=logging_format, level=logging.INFO, datefmt="%H:%M:%S")
-        elif logging_level == 'DEBUG':
-            logging.basicConfig(format=logging_format, level=logging.DEBUG, datefmt="%H:%M:%S")
         self.camera = Camera.Camera()
         self.camera.camera_open()
         time.sleep(1) #Time delay for thread in camera class to start generating frames
         self.target_color = ['red']
         self.isRunning = False
         self.size = (640, 480)
-        self.get_roi = False
         self.roi = ()
-        self.start_pick_up = False
-        self.center_list = []
+        self.rect = None
         self.last_x, self.last_y = 0, 0
         self.world_X, self.world_Y = 0, 0
         self.world_x, self.world_y = 0, 0
@@ -51,41 +42,93 @@ class Perception(object):
             'black': (0, 0, 0),
             'white': (255, 255, 255),
         }
-        self.rect = None
+
+        ## run
+        #         global track
+        #         global action_finish
+        #         global rotation_angle
+        #         global first_move
+        # #reset
+                # _stop = False
+                # track = False
+                # first_move = True
+                # __target_color = ()
+                # action_finish = True
+
         self.count = 0
-        self.rotation_angle = 0
+        self.get_roi = False
+        self.start_pick_up = False
+        self.center_list = []
         self.start_count_t1 = True
+        self.rotation_angle = 0
         self.t1 = 0
         self.detect_color = 'None'
         self.draw_color = self.range_rgb["black"]
         self.color_list = []
         self.move_square = False
         self.image = None
-        self.th_p = threading.Thread(target=self.run_perception, args=(), daemon=True)
-        self.th_p.start()
+        # self.th_p = threading.Thread(target=self.run_perception, args=(), daemon=True)
+        # self.th_p.start()
 
-    # @log_on_error(logging.DEBUG, "Can't save, Image empty")
+
     def sense(self):
         img = self.camera.frame
         if img is not None:
             self.image = img.copy()
             self.isRunning = True
         else:
-            raise IOError("Camera frame empty")
-
+            raise IOError("Camera empty")
 
     def stop_perception(self):
         self.isRunning = False
-        print("Stopping perception")
+        print("Stop perception")
         self.camera.camera_close()
         cv2.destroyAllWindows()
 
-    # @log_on_error(logging.DEBUG, "Can't show, Image empty")
     def show(self, name='frame', frame=None):
         if frame is not None:
             cv2.imshow(name, frame)
         else:
             raise IOError("Input frame empty")
+
+    def getAreaMaxContour(contours):
+        contour_area_temp = 0
+        contour_area_max = 0
+        area_max_contour = None
+
+        for c in contours:  # iterate over all contours
+            contour_area_temp = math.fabs(cv2.contourArea(c))  # Calculate the contour area
+            if contour_area_temp > contour_area_max:
+                contour_area_max = contour_area_temp
+                if contour_area_temp > 300:  # The contour with the largest area is valid only if the area is greater than 300 to filter out the noise
+                    area_max_contour = c
+
+        return area_max_contour, contour_area_max  # returns the largest contour
+
+
+    def setTargetColor(self, target_color):
+        self.target_color = target_color
+
+    def run_perception(self, name='frame'):
+        while True:
+            self.sense()
+            if self.image is not None:
+                frame = self.process()
+                self.show(name, frame)
+                key = cv2.waitKey(1)
+                if key == 27:
+                    self.stop_perception()
+                    break
+    def run_percep_curr(self, name='frame'):
+        while True:
+            # self.sense()
+            if self.image is not None:
+                frame = self.process()
+                self.show(name, frame)
+                key = cv2.waitKey(1)
+                if key == 27:
+                    self.stop_perception()
+                    break
 
 
     def process(self):
@@ -199,45 +242,13 @@ class Perception(object):
         cv2.putText(img, "Color: " + self.detect_color, (10, img.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, self.draw_color, 2)
         return img
 
-    def setTargetColor(self, target_color):
-        self.target_color = target_color
-
-
-    # Find the contour with the largest area
-    # argument is a list of contours to compare
-    @staticmethod
-    def getAreaMaxContour(contours):
-        contour_area_temp = 0
-        contour_area_max = 0
-        area_max_contour = None
-
-        for c in contours:  # iterate over all contours
-            contour_area_temp = math.fabs(cv2.contourArea(c))  # Calculate the contour area
-            if contour_area_temp > contour_area_max:
-                contour_area_max = contour_area_temp
-                if contour_area_temp > 300:  # The contour with the largest area is valid only if the area is greater than 300 to filter out the noise
-                    area_max_contour = c
-
-        return area_max_contour, contour_area_max  # returns the largest contour
-
-    def run_perception(self, name='frame'):
-        while True:
-            self.sense()
-            if self.image is not None:
-                frame = self.process()
-                self.show(name, frame)
-                key = cv2.waitKey(1)
-                if key == 27:
-                    self.stop_perception()
-                    break
-
 
 if __name__ == '__main__':
 
-    percept = Perception('DEBUG')
+    percept = Perception()
     percept.setTargetColor(['red','blue','green'])
     while True:
         key = cv2.waitKey(1)
         if key == 27:
-            print("main code end")
+            print("code end")
             break
