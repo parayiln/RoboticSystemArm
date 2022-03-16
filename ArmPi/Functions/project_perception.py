@@ -115,7 +115,7 @@ class Perception(object):
             # cv2.circle(red (cX, cY), 7, (255, 255, 255), -1)
             #cv2.imshow("Red",red)
 
-            cv2.imshow(name, red)
+            cv2.imshow("Red cubes", red)
         else:
             raise IOError("Input frame empty")
 

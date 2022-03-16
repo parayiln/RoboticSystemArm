@@ -18,7 +18,8 @@ from ArmIK.ArmMoveIK import *
 import HiwonderSDK.Board as Board
 from CameraCalibration.CalibrationConfig import *
 sys.path.append('/home/nidhi/RoboticSystemArm/ArmPi/Function')
-from perception import Perception
+from project_perception import Perception
+import random
 
 class Motion(Perception):
     def __init__(self, servo1=500, task='sorting', logging_level='INFO'):
@@ -54,9 +55,9 @@ class Motion(Perception):
         self.AK.setPitchRangeMoving((0, 14, 3), -90, -90, 0, 1000)
         time.sleep(5)
         while (self.game_status==False):
-            next_move=randfom.randint(0, len(self.curr_cubes))
+            next_move=random.randint(0, len(self.curr_cubes))
             self.curr_x , self.curr_y = convertCoordinate(self.curr_cubes[next_move][0], self.curr_cubes[next_move][0], self.size)
-            self.AK.setPitchRangeMoving((0, self.curr_x *self.scale_x, self.curr_y *self.scale_y), -90, -90, 0, 1000)
+            self.AK.setPitchRangeMoving((0, self.curr_x, self.curr_y ), -90, -90, 0, 1000)
             time.sleep(5)
             self.AK.setPitchRangeMoving((0, 14, 3), -90, -90, 0, 1000)
             time.sleep(10)
@@ -68,7 +69,7 @@ class Motion(Perception):
     def game_over(self):
         print(" Is the gave over? type 'n' for no or 'y' for yes")
         game_status =input()
-        if game_over == 'n':
+        if game_status == 'n':
             self.game_status = False
         else:
             self.game_status= True
